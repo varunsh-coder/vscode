@@ -6,6 +6,7 @@
 import { ThrottledDelayer } from 'vs/base/common/async';
 import { VSBuffer } from 'vs/base/common/buffer';
 import { join } from 'vs/base/common/path';
+import { joinPath } from 'vs/base/common/resources';
 import { isUndefined, isUndefinedOrNull } from 'vs/base/common/types';
 import { URI } from 'vs/base/common/uri';
 import { IEnvironmentMainService } from 'vs/platform/environment/electron-main/environmentMainService';
@@ -151,17 +152,29 @@ export class StateMainService implements IStateMainService {
 
 	private static readonly STATE_FILE = 'storage.json';
 
+	private readonly legacyStateFilePath = URI.file(join(this.environmentMainService.userDataPath, StateMainService.STATE_FILE));
+	private readonly stateFilePath = joinPath(this.environmentMainService.appSettingsHome, StateMainService.STATE_FILE);
+
 	private readonly fileStorage: FileStorage;
 
 	constructor(
-		@IEnvironmentMainService environmentMainService: IEnvironmentMainService,
-		@ILogService logService: ILogService,
-		@IFileService fileService: IFileService
+		@IEnvironmentMainService private readonly environmentMainService: IEnvironmentMainService,
+		@ILogService private readonly logService: ILogService,
+		@IFileService private readonly fileService: IFileService
 	) {
-		this.fileStorage = new FileStorage(URI.file(join(environmentMainService.userDataPath, StateMainService.STATE_FILE)), logService, fileService);
+		this.fileStorage = new FileStorage(this.stateFilePath, logService, fileService);
 	}
 
 	async init(): Promise<void> {
+		try {
+			// TODO@bpasero remove legacy migration eventually
+			await this.fileService.move(this.legacyStateFilePath, this.stateFilePath, false);
+		} catch (error) {
+			if (error.code !== 'ENOENT') {
+				this.logService.error(error);
+			}
+		}
+
 		return this.fileStorage.init();
 	}
 
