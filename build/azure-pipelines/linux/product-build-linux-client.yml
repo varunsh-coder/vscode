@@ -259,6 +259,7 @@ steps:
   - script: |
       set -e
       VSCODE_REMOTE_SERVER_PATH="$(agent.builddirectory)/vscode-reh-web-linux-$(VSCODE_ARCH)" \
+      npx playwright install chrome \
       yarn smoketest-no-compile --web --headless --electronArgs="--disable-dev-shm-usage"
     timeoutInMinutes: 10
     displayName: Run smoke tests (Browser, Chromium)
