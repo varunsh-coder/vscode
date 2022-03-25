@@ -236,7 +236,7 @@ steps:
   - script: |
       set -e
       VSCODE_REMOTE_SERVER_PATH="$(agent.builddirectory)/vscode-reh-web-darwin-$(VSCODE_ARCH)" \
-      npx playwright install chrome \
+      npx playwright install chrome-beta \
       yarn smoketest-no-compile --web --headless
     timeoutInMinutes: 10
     displayName: Run smoke tests (Browser, Chromium)

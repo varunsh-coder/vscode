@@ -259,7 +259,7 @@ async function launchServer(options: LaunchOptions) {
 async function launchBrowser(options: LaunchOptions, endpoint: string) {
 	const { logger, workspacePath } = options;
 
-	const browser = await measureAndLog(playwright[options.browser ?? 'chromium'].launch({ channel: 'chrome', headless: options.headless ?? false }), 'playwright#launch', logger);
+	const browser = await measureAndLog(playwright[options.browser ?? 'chromium'].launch({ channel: 'chrome-beta', headless: options.headless ?? false }), 'playwright#launch', logger);
 	browser.on('disconnected', () => logger.log(`Playwright: browser disconnected`));
 
 	const context = await measureAndLog(browser.newContext(), 'browser.newContext', logger);
