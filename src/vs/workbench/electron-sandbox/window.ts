@@ -63,6 +63,7 @@ import { whenEditorClosed } from 'vs/workbench/browser/editor';
 import { ISharedProcessService } from 'vs/platform/ipc/electron-sandbox/services';
 import { IProgressService, ProgressLocation } from 'vs/platform/progress/common/progress';
 import { toErrorMessage } from 'vs/base/common/errorMessage';
+import { DomEmitter } from 'vs/base/browser/event';
 
 export class NativeWindow extends Disposable {
 
@@ -352,17 +353,31 @@ export class NativeWindow extends Disposable {
 	}
 
 	private onWillShutdown({ reason, force }: WillShutdownEvent): void {
-		this.progressService.withProgress({
-			location: ProgressLocation.Dialog, 				// use a dialog to prevent the user from making any more interactions now
-			buttons: [this.toForceShutdownLabel(reason)],	// allow to force shutdown anyway
-			delay: 800,										// delay so that it only appears when operation takes a long time
-			cancellable: false,								// do not allow to cancel
-			sticky: true,									// do not allow to dismiss
-			title: this.toShutdownLabel(reason, false)
-		}, () => {
-			return Event.toPromise(this.lifecycleService.onDidShutdown); // dismiss this dialog when we actually shutdown
-		}, () => {
-			force();
+		const now = Date.now();
+
+		// This will bring up a modal dialog informing the user about pending
+		// shutdown operations that block the shutdown. To reduce UI weight,
+		// only show this modal experience when the user interacts with the
+		// page. This reduces the chances of always bringing up the modal dialog
+		// after some delay.
+
+		Event.toPromise(Event.any(
+			Event.once(new DomEmitter(document.body, EventType.KEY_DOWN, true).event),
+			Event.once(new DomEmitter(document.body, EventType.MOUSE_DOWN, true).event),
+			Event.once(this.lifecycleService.onDidShutdown)
+		)).then(() => {
+			this.progressService.withProgress({
+				location: ProgressLocation.Dialog, 				// use a dialog to prevent the user from making any more interactions now
+				buttons: [this.toForceShutdownLabel(reason)],	// allow to force shutdown anyway
+				delay: 800 - (Date.now() - now),				// delay up to 800ms from when shutdown started
+				cancellable: false,								// do not allow to cancel
+				sticky: true,									// do not allow to dismiss
+				title: this.toShutdownLabel(reason, false)
+			}, () => {
+				return Event.toPromise(this.lifecycleService.onDidShutdown); // dismiss this dialog when we actually shutdown
+			}, () => {
+				force();
+			});
 		});
 	}
 
