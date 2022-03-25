@@ -9,6 +9,7 @@ import { join } from 'vs/base/common/path';
 import { joinPath } from 'vs/base/common/resources';
 import { isUndefined, isUndefinedOrNull } from 'vs/base/common/types';
 import { URI } from 'vs/base/common/uri';
+import { Promises } from 'vs/base/node/pfs';
 import { IEnvironmentMainService } from 'vs/platform/environment/electron-main/environmentMainService';
 import { FileOperationError, FileOperationResult, IFileService } from 'vs/platform/files/common/files';
 import { ILogService } from 'vs/platform/log/common/log';
@@ -160,7 +161,7 @@ export class StateMainService implements IStateMainService {
 	constructor(
 		@IEnvironmentMainService private readonly environmentMainService: IEnvironmentMainService,
 		@ILogService private readonly logService: ILogService,
-		@IFileService private readonly fileService: IFileService
+		@IFileService fileService: IFileService
 	) {
 		this.fileStorage = new FileStorage(this.stateFilePath, logService, fileService);
 	}
@@ -168,7 +169,7 @@ export class StateMainService implements IStateMainService {
 	async init(): Promise<void> {
 		try {
 			// TODO@bpasero remove legacy migration eventually
-			await this.fileService.move(this.legacyStateFilePath, this.stateFilePath, false);
+			await Promises.move(this.legacyStateFilePath.fsPath, this.stateFilePath.fsPath);
 		} catch (error) {
 			if (error.code !== 'ENOENT') {
 				this.logService.error(error);
